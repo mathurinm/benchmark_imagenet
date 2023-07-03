@@ -113,7 +113,7 @@ class Solver(BaseSolver):
         'workers': [4],
         'mixup_alpha': [None],
         'criterion': ['cross_entropy'],
-        'channel_last': [True],
+        'channels_last': [True],
         'amp': [True],
         'gpu': [None],
     }
