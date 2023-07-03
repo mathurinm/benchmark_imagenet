@@ -14,7 +14,6 @@ with safe_import_context() as import_ctx:
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
-
 def train_single_epoch(model, train_loader, epoch, device, criterion, optimizer, scaler, clip_grad_norm, scheduler, print_freq, channels_last, mixup_alpha):
     batch_time = AverageMeter("Time", ":6.3f")
     data_time = AverageMeter("Data", ":6.3f")
@@ -116,7 +115,48 @@ class Solver(BaseSolver):
         'channels_last': [True],
         'amp': [True],
         'gpu': [None],
+        'device_ids': [None],
     }
+
+    def device_and_distributed_init_model(self):
+        if not torch.cuda.is_available():
+            print("using CPU, this will be slow")
+        elif self.distributed:
+            # For multiprocessing distributed, DistributedDataParallel constructor
+            # should always set the single device scope, otherwise,
+            # DistributedDataParallel will use all available devices.
+            if torch.cuda.is_available():
+                print("Using DDP")
+                if self.gpu is not None:
+                    torch.cuda.set_device(self.gpu)
+                    self.model.cuda(self.gpu)
+                    # When using a single GPU per process and per
+                    # DistributedDataParallel, we need to divide the batch size
+                    # ourselves based on the total number of GPUs of the current node.
+                    # args.batch_size = int(args.batch_size / ngpus_per_node)
+                    # args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
+                    assert self.batch_size % self.world_size == 0
+                    self.batch_size = self.batch_size // self.world_size
+                    self.model = torch.nn.parallel.DistributedDataParallel(
+                        self.model, device_ids=[self.gpu]
+                    )
+                else:
+                    self.model.cuda()
+                    # DistributedDataParallel will divide and allocate batch_size to all
+                    # available GPUs if device_ids are not set
+                    self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+        elif self.gpu is not None and torch.cuda.is_available():
+            torch.cuda.set_device(self.gpu)
+            self.model = self.model.cuda(self.gpu)
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device("mps")
+        #     model = model.to(device)
+        else:
+            # DataParallel will divide and allocate batch_size to all available GPUs
+            if self.device_ids is not None:
+                self.model = torch.nn.DataParallel(self.model, device_ids=self.device_ids).cuda()
+            else:
+                self.model = torch.nn.DataParallel(self.model).cuda()
 
     def set_objective(self, model, trainset):
         # Define the information received by each solver from the objective.
@@ -126,6 +166,7 @@ class Solver(BaseSolver):
         # It is customizable for each benchmark.
         self.model = model
 
+        self.device_and_distributed_init_model()
         # set_objective is launched once per solver's parameter combination while run is launched several times for a given solver's parameter combination so we define what is common to all runs (trainloader...) here to avoid an overhead at each run
 
         # train sampler
