@@ -4,9 +4,7 @@ with safe_import_context() as import_ctx:
     import torch
     import time
     from torch.utils.data import Subset
-    AverageMeter = import_ctx.get('AverageMeter', from_='utils.meters')
-    ProgressMeter = import_ctx.get('ProgressMeter', from_='utils.meters')
-    Summary = import_ctx.get('Summary', from_='utils.meters')
+    from benchmark_utils.meters import AverageMeter, ProgressMeter, Summary
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
