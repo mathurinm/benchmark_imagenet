@@ -8,7 +8,7 @@ with safe_import_context() as import_ctx:
     import torchvision.models as models
     import torch
     from benchmark_utils.accuracy import evaluate_acc_and_loss
-
+    from benchmark_utils.model.simple_vit import simple_vit_s16_in1k_butterfly, simple_vit_b16_in1k_butterfly, simple_vit_s16_in1k, simple_vit_b16_in1k
 # The benchmark objective must be named `Objective` and
 # inherit from `BaseObjective` for `benchopt` to work properly.
 class Objective(BaseObjective):
