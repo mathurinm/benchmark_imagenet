@@ -8,13 +8,19 @@ with safe_import_context() as import_ctx:
     import torchvision.models as models
     import torch
     from benchmark_utils.accuracy import evaluate_acc_and_loss
-    from benchmark_utils.model.simple_vit import simple_vit_s16_in1k_butterfly, simple_vit_b16_in1k_butterfly, simple_vit_s16_in1k, simple_vit_b16_in1k
+    from benchmark_utils.model.simple_vit import (
+        simple_vit_s16_in1k_butterfly,
+        simple_vit_b16_in1k_butterfly,
+        simple_vit_s16_in1k,
+        simple_vit_b16_in1k,
+    )
+
+
 # The benchmark objective must be named `Objective` and
 # inherit from `BaseObjective` for `benchopt` to work properly.
 class Objective(BaseObjective):
-
     # Name to select the objective in the CLI and to display the results.
-    name = "Ordinary Least Squares"
+    name = "ImageNet"
 
     # List of parameters for the objective. The benchmark will consider
     # the cross product for each key in the dictionary.
@@ -56,11 +62,21 @@ class Objective(BaseObjective):
         # to compute the validation and test metrics
         # train loader is defined in the solver as it is only used to train the model
         self.val_loader = torch.utils.data.DataLoader(
-                valset, batch_size=self.batch_size, shuffle=(val_sampler is None),
-                num_workers=self.workers, pin_memory=True, sampler=val_sampler)
+            valset,
+            batch_size=self.batch_size,
+            shuffle=(val_sampler is None),
+            num_workers=self.workers,
+            pin_memory=True,
+            sampler=val_sampler,
+        )
         self.test_loader = torch.utils.data.DataLoader(
-                testset, batch_size=self.batch_size, shuffle=(test_sampler is None),
-                num_workers=self.workers, pin_memory=True, sampler=test_sampler)
+            testset,
+            batch_size=self.batch_size,
+            shuffle=(test_sampler is None),
+            num_workers=self.workers,
+            pin_memory=True,
+            sampler=test_sampler,
+        )
 
     def compute(self, model):
         # The arguments of this function are the outputs of the
@@ -80,23 +96,38 @@ class Objective(BaseObjective):
         batch_size = self.batch_size
         prefix_print = "val"
 
-        top1, top5, loss = evaluate_acc_and_loss(dataloader, model, criterion, gpu, print_freq, distributed, world_size, workers, batch_size, prefix_print)
+        top1, top5, loss = evaluate_acc_and_loss(
+            dataloader,
+            model,
+            criterion,
+            gpu,
+            print_freq,
+            distributed,
+            world_size,
+            workers,
+            batch_size,
+            prefix_print,
+        )
 
         # This method can return many metrics in a dictionary. One of these
         # metrics needs to be `value` for convergence detection purposes.
         return dict(
-            value = loss if isinstance(loss, float) or isinstance(loss, int)
-                else loss.item(),
-            val_loss = loss if isinstance(loss, float) or isinstance(loss, int)
-                else loss.item(),
-            val_top1 = top1 if isinstance(top1, float) or isinstance(top1, int)
-                else top1.item(),
-            val_top5 = top5 if isinstance(top5, float) or isinstance(top5, int)
-                else top5.item(),
+            value=loss
+            if isinstance(loss, float) or isinstance(loss, int)
+            else loss.item(),
+            val_loss=loss
+            if isinstance(loss, float) or isinstance(loss, int)
+            else loss.item(),
+            val_top1=top1
+            if isinstance(top1, float) or isinstance(top1, int)
+            else top1.item(),
+            val_top5=top5
+            if isinstance(top5, float) or isinstance(top5, int)
+            else top5.item(),
             # train_top1 = train_top1,
             # train_top5 = train_top5,
             # train_loss = train_loss,
-            )
+        )
 
     def get_one_solution(self):
         # Return one solution. The return value should be an object compatible
