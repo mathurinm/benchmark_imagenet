@@ -62,7 +62,7 @@ class Objective(BaseObjective):
                 testset, batch_size=self.batch_size, shuffle=(test_sampler is None),
                 num_workers=self.workers, pin_memory=True, sampler=test_sampler)
 
-    def compute(self, model, train_top1, train_top5, train_loss):
+    def compute(self, model):
         # The arguments of this function are the outputs of the
         # `Solver.get_result`. This defines the benchmark's API to pass
         # solvers' result. This is customizable for each benchmark.
@@ -89,9 +89,9 @@ class Objective(BaseObjective):
             val_loss = loss,
             val_top1 = top1,
             val_top5 = top5,
-            train_top1 = train_top1,
-            train_top5 = train_top5,
-            train_loss = train_loss,
+            # train_top1 = train_top1,
+            # train_top5 = train_top5,
+            # train_loss = train_loss,
             )
 
     def get_one_solution(self):

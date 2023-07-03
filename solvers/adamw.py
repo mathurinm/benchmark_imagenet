@@ -229,7 +229,7 @@ class Solver(BaseSolver):
                 train_sampler.set_epoch(epoch)
 
             # train for one epoch
-            self.train_top1, self.train_top5, self.train_loss = train_single_epoch(self.model, self.train_loader, epoch, self.device, self.criterion, self.optimizer, self.scaler, self.clip_grad_norm, self.scheduler, self.print_freq, self.channels_last, self.mixup_alpha)
+            train_single_epoch(self.model, self.train_loader, epoch, self.device, self.criterion, self.optimizer, self.scaler, self.clip_grad_norm, self.scheduler, self.print_freq, self.channels_last, self.mixup_alpha)
 
 
 
@@ -238,4 +238,4 @@ class Solver(BaseSolver):
         # The outputs of this function are the arguments of `Objective.compute`
         # This defines the benchmark's API for solvers' results.
         # it is customizable for each benchmark.
-        return self.model, self.train_top1, self.train_top5, self.train_loss
+        return self.model
