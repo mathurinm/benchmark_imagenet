@@ -20,9 +20,9 @@ class Dataset(BaseDataset):
     # the cross product for each key in the dictionary.
     # Any parameters 'param' defined here is available as `self.param`.
     parameters = {
-        "trainsize": [1281167],
-        "valsize": [50000],
-        "testsize": [50000],
+        "trainsize": [128 * 10], #[1281167],
+        "valsize": [128 * 10], #[50000],
+        "testsize": [128 * 10], #[50000],
     }
 
     def get_data(self):
