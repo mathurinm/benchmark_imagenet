@@ -112,7 +112,6 @@ class Solver(BaseSolver):
         'workers': [4],
         'mixup_alpha': [None],
         'clip_grad_norm': [1],
-        'criterion': ['cross_entropy'],
         'channels_last': [True],
         'amp': [True],
         'gpu': [None],
@@ -210,7 +209,7 @@ class Solver(BaseSolver):
             self.device = torch.device("cpu")
 
         # loss function (criterion)
-        criterion = torch.nn.CrossEntropyLoss().to(self.device)
+        self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
 
         # optimizer
         parameters = self.model.parameters()
