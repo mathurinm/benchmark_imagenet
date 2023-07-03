@@ -85,8 +85,8 @@ class Objective(BaseObjective):
         # This method can return many metrics in a dictionary. One of these
         # metrics needs to be `value` for convergence detection purposes.
         return dict(
-            value = top1 if isinstance(top1, float) or isinstance(top1, int)
-                else top1.item(),
+            value = loss if isinstance(loss, float) or isinstance(loss, int)
+                else loss.item(),
             val_loss = loss if isinstance(loss, float) or isinstance(loss, int)
                 else loss.item(),
             val_top1 = top1 if isinstance(top1, float) or isinstance(top1, int)
