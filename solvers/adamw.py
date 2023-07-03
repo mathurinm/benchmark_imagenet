@@ -1,4 +1,5 @@
 from benchopt import BaseSolver, safe_import_context
+from benchopt.stopping_criterion import SufficientProgressCriterion
 
 # Protect the import with `safe_import_context()`. This allows:
 # - skipping import to speed up autocompletion in CLI.
@@ -13,6 +14,7 @@ with safe_import_context() as import_ctx:
     from torch.utils.data.dataloader import default_collate
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
+
 
 def train_single_epoch(model, train_loader, epoch, device, criterion, optimizer, scaler, clip_grad_norm, scheduler, print_freq, channels_last, mixup_alpha):
     batch_time = AverageMeter("Time", ":6.3f")
@@ -97,20 +99,24 @@ class Solver(BaseSolver):
 
     # Name to select the solver in the CLI and to display the results.
     name = 'adamw'
+    stopping_strategy = "callback"
 
+    stopping_criterion = SufficientProgressCriterion(
+        patience=60, strategy='callback'
+    )
     # List of parameters for the solver. The benchmark will consider
     # the cross product for each key in the dictionary.
     # All parameters 'p' defined here are available as 'self.p'.
     parameters = {
         'batch_size': [128],
-        'lr': [0.01],
-        'weight_decay': [0.01],
+        'lr': [0.001],
+        'weight_decay': [0.0001],
         'lr_scheduler': ['cosine'],
-        'epochs': [1],
-        'warmup_percentage': [0],
+        'epochs': [10],
+        'warmup_percentage': [5 / 90],
         'distributed': [False],
         'workers': [4],
-        'mixup_alpha': [None],
+        'mixup_alpha': [0.2],
         'clip_grad_norm': [1],
         'channels_last': [True],
         'amp': [True],
@@ -258,11 +264,26 @@ class Solver(BaseSolver):
         else:
             raise NotImplementedError
 
-    def run(self, epochs):
+        # Resume checkpoint? #TODO
+
+        # Best validation accuracy
+        self.best_top1_val = 0
+
+        # Current epoch
+        self.epoch = 0# TODO epoch = start epoch?
+
+    @staticmethod
+    def get_next(stop_val):
+        return stop_val + 1
+
+    def run(self, callback):
         # This is the function that is called to evaluate the solver.
         # It runs the algorithm for a given a number of iterations `epochs`.
 
-        for epoch in range(epochs):
+        # max_epochs
+        callback.stopping_criterion.max_runs = self.epochs
+
+        while callback(self.model):
             # time
             begin = time.time()
 
@@ -271,13 +292,18 @@ class Solver(BaseSolver):
                 train_sampler.set_epoch(epoch)
 
             # train for one epoch
-            train_single_epoch(self.model, self.train_loader, epoch, self.device, self.criterion, self.optimizer, self.scaler, self.clip_grad_norm, self.scheduler, self.print_freq, self.channels_last, self.mixup_alpha)
-
-
+            train_single_epoch(self.model, self.train_loader, self.epoch, self.device, self.criterion, self.optimizer, self.scaler, self.clip_grad_norm, self.scheduler, self.print_freq, self.channels_last, self.mixup_alpha)
+            self.epoch += 1
 
     def get_result(self):
         # Return the result from one optimization run.
         # The outputs of this function are the arguments of `Objective.compute`
         # This defines the benchmark's API for solvers' results.
         # it is customizable for each benchmark.
+        # return {"model": self.model,
+        #         "optimizer": self.optimizer,
+        #         "scheduler": self.scheduler,
+        #         "epoch": self.epoch,
+        #         "best_top1_val": self.best_top1_val
+        #         }
         return self.model
