@@ -117,6 +117,7 @@ class Solver(BaseSolver):
         'amp': [True],
         'gpu': [None],
         'device_ids': [None],
+        'print_freq': [10],
     }
 
     def device_and_distributed_init_model(self):
