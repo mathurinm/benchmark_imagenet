@@ -335,6 +335,14 @@ class Solver(BaseSolver):
         # The outputs of this function are the arguments of `Objective.compute`
         # This defines the benchmark's API for solvers' results.
         # it is customizable for each benchmark.
+        checkpoint = {
+            "model": self.model,
+            "optimizer": self.optimizer,
+            "scheduler": self.scheduler,
+            "epoch": self.epoch,
+            "best_top1_val": self.best_top1_val,
+        }
+        return checkpoint
         # return {"model": self.model,
         #         "optimizer": self.optimizer,
         #         "scheduler": self.scheduler,
