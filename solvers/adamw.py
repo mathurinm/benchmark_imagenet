@@ -315,17 +315,7 @@ class Solver(BaseSolver):
             else:
                 self.model = torch.nn.DataParallel(self.model).cuda()
 
-    def set_objective(self, trainset):
-        # Define the information received by each solver from the objective.
-        # The arguments of this function are the results of the
-        # `Objective.get_objective`. This defines the benchmark's API for
-        # passing the objective to the solver.
-        # It is customizable for each benchmark.
-        self.model = self.get_model()
-
-        self.device_and_distributed_init_model()
-        # set_objective is launched once per solver's parameter combination while run is launched several times for a given solver's parameter combination so we define what is common to all runs (trainloader...) here to avoid an overhead at each run
-
+    def set_train_loader(self, trainset):
         # train sampler
         if self.distributed:
             raise NotImplementedError
@@ -354,37 +344,7 @@ class Solver(BaseSolver):
             collate_fn=collate_fn,
         )
 
-        # device
-        if torch.cuda.is_available():
-            if self.gpu:
-                self.device = torch.device("cuda:{}".format(self.gpu))
-            else:
-                self.device = torch.device("cuda")
-        # elif torch.backends.mps.is_available():
-        #     device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
-
-        # loss function (criterion)
-        self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
-
-        # optimizer
-        parameters = self.model.parameters()
-        self.optimizer = torch.optim.AdamW(
-            parameters, lr=self.lr, weight_decay=self.weight_decay
-        )
-
-        # amp
-        if self.amp:
-            self.scaler = torch.cuda.amp.GradScaler()
-        else:
-            self.scaler = None
-
-        # channels_last
-        if self.channels_last:
-            self.model.to(memory_format=torch.channels_last)
-
-        # scheduler
+    def set_scheduler(self):
         total_num_iterations = self.max_epochs * len(self.train_loader)
         warmup_iterations = int(self.warmup_percentage * total_num_iterations)
         if self.lr_scheduler == "constant":
@@ -418,12 +378,7 @@ class Solver(BaseSolver):
         else:
             raise NotImplementedError
 
-        # set saving path for checkpoints and logger
-
-        self.set_saving_path()
-
-        # create logger for saving stats in csv
-        # logger to save in csv
+    def set_logger(self):
         self.logger = None
         if self.log:
             metrics_name = [
@@ -446,6 +401,63 @@ class Solver(BaseSolver):
             self.logger = Logger(
                 metrics_name, csv_dir=csv_dir, tensorboard_dir=tensorboard_dir
             )
+
+    def set_objective(self, trainset):
+        # Define the information received by each solver from the objective.
+        # The arguments of this function are the results of the
+        # `Objective.get_objective`. This defines the benchmark's API for
+        # passing the objective to the solver.
+        # It is customizable for each benchmark.
+        self.model = self.get_model()
+
+        self.device_and_distributed_init_model()
+        # set_objective is launched once per solver's parameter combination while run is launched several times for a given solver's parameter combination so we define what is common to all runs (trainloader...) here to avoid an overhead at each run
+
+        # trainloader
+
+        self.set_train_loader(trainset)
+
+        # device
+        if torch.cuda.is_available():
+            if self.gpu:
+                self.device = torch.device("cuda:{}".format(self.gpu))
+            else:
+                self.device = torch.device("cuda")
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
+
+        # loss function (criterion)
+        self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
+
+        # optimizer
+        parameters = self.model.parameters()
+        self.optimizer = torch.optim.AdamW(
+            parameters, lr=self.lr, weight_decay=self.weight_decay
+        )
+
+        # amp
+        if self.amp:
+            self.scaler = torch.cuda.amp.GradScaler()
+        else:
+            self.scaler = None
+
+        # channels_last
+        if self.channels_last:
+            self.model.to(memory_format=torch.channels_last)
+
+        # scheduler
+        self.set_scheduler()
+
+        # set saving path for checkpoints and logger
+
+        self.set_saving_path()
+
+        # create logger for saving stats in csv
+        # logger to save in csv
+
+        self.set_logger()
 
         # optionally resume from a checkpoint in run()
 
