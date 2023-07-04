@@ -5,7 +5,10 @@ from benchopt.stopping_criterion import SufficientProgressCriterion
 # - skipping import to speed up autocompletion in CLI.
 # - getting requirements info when all dependencies are not installed.
 with safe_import_context() as import_ctx:
-    from benchmark_utils.lr_schedulers import scheduler_linear_warmup_and_cosine, scheduler_linear_warmup_and_multistep
+    from benchmark_utils.lr_schedulers import (
+        scheduler_linear_warmup_and_cosine,
+        scheduler_linear_warmup_and_multistep,
+    )
     from benchmark_utils.accuracy import accuracy
     from benchmark_utils.meters import AverageMeter, ProgressMeter
     from benchmark_utils.mixup import RandomMixup
@@ -16,7 +19,20 @@ with safe_import_context() as import_ctx:
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
 
-def train_single_epoch(model, train_loader, epoch, device, criterion, optimizer, scaler, clip_grad_norm, scheduler, print_freq, channels_last, mixup_alpha):
+def train_single_epoch(
+    model,
+    train_loader,
+    epoch,
+    device,
+    criterion,
+    optimizer,
+    scaler,
+    clip_grad_norm,
+    scheduler,
+    print_freq,
+    channels_last,
+    mixup_alpha,
+):
     batch_time = AverageMeter("Time", ":6.3f")
     data_time = AverageMeter("Data", ":6.3f")
     # data_to_device_time = AverageMeter('DataToDevice', ':6.3f')
@@ -45,7 +61,9 @@ def train_single_epoch(model, train_loader, epoch, device, criterion, optimizer,
 
         # move data to the same device as model
         if channels_last:
-            images = images.to(device, non_blocking=True, memory_format=torch.channels_last)
+            images = images.to(
+                device, non_blocking=True, memory_format=torch.channels_last
+            )
         else:
             images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
@@ -93,36 +111,34 @@ def train_single_epoch(model, train_loader, epoch, device, criterion, optimizer,
 
     return top1.avg, top5.avg, losses.avg
 
+
 # The benchmark solvers must be named `Solver` and
 # inherit from `BaseSolver` for `benchopt` to work properly.
 class Solver(BaseSolver):
-
     # Name to select the solver in the CLI and to display the results.
-    name = 'adamw'
+    name = "adamw"
     stopping_strategy = "callback"
 
-    stopping_criterion = SufficientProgressCriterion(
-        patience=60, strategy='callback'
-    )
+    stopping_criterion = SufficientProgressCriterion(patience=60, strategy="callback")
     # List of parameters for the solver. The benchmark will consider
     # the cross product for each key in the dictionary.
     # All parameters 'p' defined here are available as 'self.p'.
     parameters = {
-        'batch_size': [128],
-        'lr': [0.001],
-        'weight_decay': [0.0001],
-        'lr_scheduler': ['cosine'],
-        'epochs': [10],
-        'warmup_percentage': [5 / 90],
-        'distributed': [False],
-        'workers': [4],
-        'mixup_alpha': [0.2],
-        'clip_grad_norm': [1],
-        'channels_last': [True],
-        'amp': [True],
-        'gpu': [None],
-        'device_ids': [None],
-        'print_freq': [10],
+        "batch_size": [128],
+        "lr": [0.001],
+        "weight_decay": [0.0001],
+        "lr_scheduler": ["cosine"],
+        "epochs": [10],
+        "warmup_percentage": [5 / 90],
+        "distributed": [False],
+        "workers": [4],
+        "mixup_alpha": [0.2],
+        "clip_grad_norm": [1],
+        "channels_last": [True],
+        "amp": [True],
+        "gpu": [None],
+        "device_ids": [None],
+        "print_freq": [10],
     }
 
     def device_and_distributed_init_model(self):
@@ -161,7 +177,9 @@ class Solver(BaseSolver):
         else:
             # DataParallel will divide and allocate batch_size to all available GPUs
             if self.device_ids is not None:
-                self.model = torch.nn.DataParallel(self.model, device_ids=self.device_ids).cuda()
+                self.model = torch.nn.DataParallel(
+                    self.model, device_ids=self.device_ids
+                ).cuda()
             else:
                 self.model = torch.nn.DataParallel(self.model).cuda()
 
@@ -186,6 +204,7 @@ class Solver(BaseSolver):
         if self.mixup_alpha is not None:
             num_classes = 1000
             mixup = RandomMixup(num_classes, p=1.0, alpha=self.mixup_alpha)
+
             def collate_fn(batch):
                 return mixup(*default_collate(batch))
 
@@ -201,7 +220,7 @@ class Solver(BaseSolver):
             pin_memory=True,
             sampler=train_sampler,
             collate_fn=collate_fn,
-            )
+        )
 
         # device
         if torch.cuda.is_available():
@@ -219,8 +238,9 @@ class Solver(BaseSolver):
 
         # optimizer
         parameters = self.model.parameters()
-        self.optimizer = torch.optim.AdamW(parameters, lr=self.lr,
-                                      weight_decay=self.weight_decay)
+        self.optimizer = torch.optim.AdamW(
+            parameters, lr=self.lr, weight_decay=self.weight_decay
+        )
 
         # amp
         if self.amp:
@@ -260,7 +280,9 @@ class Solver(BaseSolver):
                 milestones_in_iterations=milestones_in_iterations,
             )
             print(f"scheduler warmup iterations: {warmup_iterations}")
-            print(f"scheduler milestones in iteration number: {milestones_in_iterations}")
+            print(
+                f"scheduler milestones in iteration number: {milestones_in_iterations}"
+            )
         else:
             raise NotImplementedError
 
@@ -270,7 +292,7 @@ class Solver(BaseSolver):
         self.best_top1_val = 0
 
         # Current epoch
-        self.epoch = 0# TODO epoch = start epoch?
+        self.epoch = 0  # TODO epoch = start epoch?
 
     @staticmethod
     def get_next(stop_val):
@@ -292,7 +314,20 @@ class Solver(BaseSolver):
                 train_sampler.set_epoch(epoch)
 
             # train for one epoch
-            train_single_epoch(self.model, self.train_loader, self.epoch, self.device, self.criterion, self.optimizer, self.scaler, self.clip_grad_norm, self.scheduler, self.print_freq, self.channels_last, self.mixup_alpha)
+            train_single_epoch(
+                self.model,
+                self.train_loader,
+                self.epoch,
+                self.device,
+                self.criterion,
+                self.optimizer,
+                self.scaler,
+                self.clip_grad_norm,
+                self.scheduler,
+                self.print_freq,
+                self.channels_last,
+                self.mixup_alpha,
+            )
             self.epoch += 1
 
     def get_result(self):

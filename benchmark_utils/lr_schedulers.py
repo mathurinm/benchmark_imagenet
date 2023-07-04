@@ -7,7 +7,8 @@ with safe_import_context() as import_ctx:
 
 
 class WarmupMultistep:
-    """ iteration here is the number of training iterations (not epochs) """
+    """iteration here is the number of training iterations (not epochs)"""
+
     def __init__(self, warmup_iterations, milestones_in_iterations, gamma):
         self.warmup_iterations = warmup_iterations
         self.milestones_in_iterations = sorted(milestones_in_iterations)
@@ -23,15 +24,13 @@ class WarmupMultistep:
         return factor
 
 
-def scheduler_linear_warmup_and_multistep(optimizer, gamma, warmup_iterations, milestones_in_iterations):
-    """ This scheduler will be called at each training iteration, not at each epoch """
+def scheduler_linear_warmup_and_multistep(
+    optimizer, gamma, warmup_iterations, milestones_in_iterations
+):
+    """This scheduler will be called at each training iteration, not at each epoch"""
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
-        WarmupMultistep(
-            warmup_iterations,
-            milestones_in_iterations,
-            gamma
-        ),
+        WarmupMultistep(warmup_iterations, milestones_in_iterations, gamma),
     )
     return scheduler
 
@@ -49,11 +48,15 @@ class WarmupCosine:
             iteration = iteration - self.warmup_end
             max_iter = self.max_iter - self.warmup_end
             iteration = (iteration / max_iter) * np.pi
-            factor = self.factor_min + 0.5 * (1 - self.factor_min) * (np.cos(iteration) + 1)
+            factor = self.factor_min + 0.5 * (1 - self.factor_min) * (
+                np.cos(iteration) + 1
+            )
         return factor
 
 
-def scheduler_linear_warmup_and_cosine(optimizer, initial_lr, warmup_iterations, max_iterations, min_lr=0.0):
+def scheduler_linear_warmup_and_cosine(
+    optimizer, initial_lr, warmup_iterations, max_iterations, min_lr=0.0
+):
     # min_lr = 0 because: https://github.com/google-research/big_vision/blob/47ac2fd075fcb66cadc0e39bd959c78a6080070d/big_vision/utils.py#L929
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
