@@ -15,6 +15,9 @@ with safe_import_context() as import_ctx:
     import time
     import torch
     from torch.utils.data.dataloader import default_collate
+    import os
+    from benchmark_utils.checkpoint import default_directory_checkpoint
+    from benchmark_utils.logger import Logger
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
@@ -128,7 +131,7 @@ class Solver(BaseSolver):
         "lr": [0.001],
         "weight_decay": [0.0001],
         "lr_scheduler": ["cosine"],
-        "epochs": [10],
+        "max_epochs": [10],
         "warmup_percentage": [5 / 90],
         "distributed": [False],
         "workers": [4],
@@ -139,6 +142,10 @@ class Solver(BaseSolver):
         "gpu": [None],
         "device_ids": [None],
         "print_freq": [10],
+        "resume_from_path": ["./checkpoints/model_best.pth.tar"],  # [None]
+        "tensorboard": [False],
+        "rank": [0],
+        "log": [True],
     }
 
     def device_and_distributed_init_model(self):
@@ -253,7 +260,7 @@ class Solver(BaseSolver):
             self.model.to(memory_format=torch.channels_last)
 
         # scheduler
-        total_num_iterations = self.epochs * len(self.train_loader)
+        total_num_iterations = self.max_epochs * len(self.train_loader)
         warmup_iterations = int(self.warmup_percentage * total_num_iterations)
         if self.lr_scheduler == "constant":
             print("=>constant lr")
@@ -286,13 +293,35 @@ class Solver(BaseSolver):
         else:
             raise NotImplementedError
 
-        # Resume checkpoint? #TODO
+        # create logger for saving stats in csv
 
-        # Best validation accuracy
-        self.best_val_top1 = 0
+        # logger to save in csv
+        self.logger = None
+        if self.log:
+            metrics_name = [
+                "train/loss",
+                "train/acc1",
+                "train/acc5",
+                "epoch",
+                "batch_size",
+                "weight_decay",
+                "lr",
+                "memory",
+                "seed",
+                "dp_epsilon",
+            ]
+            csv_dir = default_directory_checkpoint / f"rank={self.rank}" / "csv"
+            if self.tensorboard:
+                tensorboard_dir = (
+                    default_directory_checkpoint / f"rank={self.rank}" / "tensorboard"
+                )
+            else:
+                tensorboard_dir = None
+            self.logger = Logger(
+                metrics_name, csv_dir=csv_dir, tensorboard_dir=tensorboard_dir
+            )
 
-        # Current epoch
-        self.epoch = 0  # TODO epoch = start epoch?
+        # optionally resume from a checkpoint in run()
 
     @staticmethod
     def get_next(stop_val):
@@ -300,20 +329,54 @@ class Solver(BaseSolver):
 
     def run(self, callback):
         # This is the function that is called to evaluate the solver.
-        # It runs the algorithm for a given a number of iterations `epochs`.
+        # It runs the algorithm for a given a number of iterations `max_epochs`.
 
-        # max_epochs
-        callback.stopping_criterion.max_runs = self.epochs
-
-        checkpoint = {
+        # something that carries everything we want to save or track (logging in csv is done in compute() of objective and not in run() of solver to avoid time measurements of logging)
+        solver_state = {
             "model": self.model,
             "optimizer": self.optimizer,
             "scheduler": self.scheduler,
-            "epoch": self.epoch,
-            "best_val_top1": self.best_val_top1,
+            "epoch": 0,
+            "best_val_top1": 0,
+            "logger": self.logger,
+            "train_top1": None,
+            "train_top5": None,
+            "train_loss": None,
         }
 
-        while callback(checkpoint):
+        # optionally resume from a checkpoint
+        if self.resume_from_path:
+            if os.path.isfile(self.resume_from_path):
+                print("=> loading checkpoint '{}'".format(self.resume_from_path))
+                if self.gpu is None:
+                    checkpoint = torch.load(self.resume_from_path)
+                elif torch.cuda.is_available():
+                    # Map model to be loaded to specified single gpu.
+                    loc = "cuda:{}".format(self.gpu)
+                    checkpoint = torch.load(self.resume_from_path, map_location=loc)
+
+                    # best_val_top_1 may be from a checkpoint from a different GPU
+                solver_state["model"].load_state_dict(checkpoint["state_dict"])
+                solver_state["optimizer"].load_state_dict(checkpoint["optimizer"])
+                if solver_state["scheduler"] is not None:
+                    solver_state["scheduler"].load_state_dict(checkpoint["scheduler"])
+                solver_state["epoch"] = checkpoint["epoch"]
+                if self.gpu is not None:
+                    solver_state["best_val_top1"] = checkpoint["best_val_top1"].to(
+                        self.gpu
+                    )
+                print(
+                    "=> loaded checkpoint '{}' (epoch {})".format(
+                        self.resume_from_path, checkpoint["epoch"]
+                    )
+                )
+            else:
+                print("=> no checkpoint found at '{}'".format(self.resume_from_path))
+
+        # max_epochs
+        callback.stopping_criterion.max_runs = self.max_epochs - solver_state["epoch"]
+
+        while callback(solver_state):
             # time
             begin = time.time()
 
@@ -322,39 +385,38 @@ class Solver(BaseSolver):
                 train_sampler.set_epoch(epoch)
 
             # train for one epoch
-            train_single_epoch(
-                self.model,
+            (
+                solver_state["train_top1"],
+                solver_state["train_top5"],
+                solver_state["train_loss"],
+            ) = train_single_epoch(
+                solver_state["model"],
                 self.train_loader,
-                self.epoch,
+                solver_state["epoch"],
                 self.device,
                 self.criterion,
-                self.optimizer,
+                solver_state["optimizer"],
                 self.scaler,
                 self.clip_grad_norm,
-                self.scheduler,
+                solver_state["scheduler"],
                 self.print_freq,
                 self.channels_last,
                 self.mixup_alpha,
             )
-            self.epoch += 1
-            checkpoint = {
-                "model": self.model,
-                "optimizer": self.optimizer,
-                "scheduler": self.scheduler,
-                "epoch": self.epoch,
-                "best_val_top1": self.best_val_top1,
-            }
+            solver_state["epoch"] += 1
+            # best val top 1 is updated in the compute function of the objective
 
     def get_result(self):
         # Return the result from one optimization run.
         # The outputs of this function are the arguments of `Objective.compute`
         # This defines the benchmark's API for solvers' results.
         # it is customizable for each benchmark.
-        checkpoint = {
+        # ONLY USED FOR TESTS
+        solver_state = {
             "model": self.model,
             "optimizer": self.optimizer,
             "scheduler": self.scheduler,
             "epoch": self.epoch,
             "best_val_top1": self.best_val_top1,
         }
-        return checkpoint
+        return solver_state

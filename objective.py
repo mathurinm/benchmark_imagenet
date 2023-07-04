@@ -16,6 +16,7 @@ with safe_import_context() as import_ctx:
         simple_vit_b16_in1k,
     )
     from pathlib import Path
+    from benchmark_utils.checkpoint import default_directory_checkpoint
 
 
 # The benchmark objective must be named `Objective` and
@@ -80,16 +81,16 @@ class Objective(BaseObjective):
             sampler=test_sampler,
         )
 
-    def compute(self, checkpoint):
+    def compute(self, solver_state):
         # print("compute")
         # print(x)
         # model, optimizer, scheduler, epoch, best_val_top_1 = x
 
-        model = checkpoint["model"]
-        optimizer = checkpoint["optimizer"]
-        scheduler = checkpoint["scheduler"]
-        epoch = checkpoint["epoch"]
-        best_val_top1 = checkpoint["best_val_top1"]
+        model = solver_state["model"]
+        optimizer = solver_state["optimizer"]
+        scheduler = solver_state["scheduler"]
+        epoch = solver_state["epoch"]
+        best_val_top1 = solver_state["best_val_top1"]
 
         # The arguments of this function are the outputs of the
         # `Solver.get_result`. This defines the benchmark's API to pass
@@ -108,7 +109,7 @@ class Objective(BaseObjective):
         batch_size = self.batch_size
         prefix_print = "val"
 
-        top1, top5, loss = evaluate_acc_and_loss(
+        val_top1, val_top5, val_loss = evaluate_acc_and_loss(
             dataloader,
             model,
             criterion,
@@ -123,35 +124,59 @@ class Objective(BaseObjective):
 
         # Save checkpoint here
         # TODO: only do this on rank 0 when multi-GPU
-        is_best = False
+        is_best = val_top1 > best_val_top1
+        solver_state["best_val_top1"] = max(val_top1, best_val_top1)
         save_checkpoint(
             {
-                "epoch": epoch + 1,
+                "epoch": epoch,
                 "state_dict": model.state_dict(),
-                "best_val_top_1": best_val_top1,
+                "best_val_top_1": solver_state["best_val_top1"],
                 "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict() if scheduler is not None else None,
             },
             is_best,
-            directory=Path("./checkpoints"),
+            directory=default_directory_checkpoint,
         )
         # TODO exp_dir where to define?
+
+        # log
+        if solver_state["logger"] is not None:
+            metrics_dict = {
+                "train/loss": solver_state["train_loss"],
+                "train/acc1": solver_state["train_top1"]
+                if isinstance(solver_state["train_top1"], float)
+                or isinstance(solver_state["train_top1"], int)
+                else solver_state["train_top1"].item(),
+                "train/acc5": solver_state["train_top5"]
+                if isinstance(solver_state["train_top5"], float)
+                or isinstance(solver_state["train_top5"], int)
+                else solver_state["train_top5"].item(),
+                "epoch": solver_state["epoch"],
+                "batch_size": self.batch_size,
+                "lr": self.scheduler.get_last_lr()[0]
+                if self.scheduler is not None
+                else self.lr,
+                "memory": torch.cuda.max_memory_allocated() // (1024 * 1024),
+                "weight_decay": self.weight_decay,
+            }
+            print(metrics_dict)
+            solver_state["logger"].log_step(metrics_dict, solver_state["epoch"])
 
         # This method can return many metrics in a dictionary. One of these
         # metrics needs to be `value` for convergence detection purposes.
         return dict(
-            value=loss
-            if isinstance(loss, float) or isinstance(loss, int)
-            else loss.item(),
-            val_loss=loss
-            if isinstance(loss, float) or isinstance(loss, int)
-            else loss.item(),
-            val_top1=top1
-            if isinstance(top1, float) or isinstance(top1, int)
-            else top1.item(),
-            val_top5=top5
-            if isinstance(top5, float) or isinstance(top5, int)
-            else top5.item(),
+            value=val_loss
+            if isinstance(val_loss, float) or isinstance(val_loss, int)
+            else val_loss.item(),
+            val_loss=val_loss
+            if isinstance(val_loss, float) or isinstance(val_loss, int)
+            else val_loss.item(),
+            val_top1=val_top1
+            if isinstance(val_top1, float) or isinstance(val_top1, int)
+            else val_top1.item(),
+            val_top5=val_top5
+            if isinstance(val_top5, float) or isinstance(val_top5, int)
+            else val_top5.item(),
             # train_top1 = train_top1,
             # train_top5 = train_top5,
             # train_loss = train_loss,
@@ -160,14 +185,14 @@ class Objective(BaseObjective):
     def get_one_solution(self):
         # Return one solution. The return value should be an object compatible
         # with `self.compute`. This is mainly for testing purposes.
-        checkpoint = {
+        solver_state = {
             "model": self.get_model(),
             "optimizer": None,
             "scheduler": None,
             "epoch": None,
             "best_top1_val": None,
         }
-        return checkpoint
+        return solver_state
         # return self.get_model()
 
     def get_objective(self):
