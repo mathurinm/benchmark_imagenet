@@ -270,7 +270,7 @@ class Solver(BaseSolver):
         self.best_top1_val = 0
 
         # Current epoch
-        self.epoch = 0# TODO epoch = start epoch?
+        self.epoch = 0 # TODO epoch = start epoch?
 
     @staticmethod
     def get_next(stop_val):
@@ -300,10 +300,18 @@ class Solver(BaseSolver):
         # The outputs of this function are the arguments of `Objective.compute`
         # This defines the benchmark's API for solvers' results.
         # it is customizable for each benchmark.
+        checkpoint = {
+            "model": self.model,
+            "optimizer": self.optimizer,
+            "scheduler": self.scheduler,
+            "epoch": self.epoch,
+            "best_top1_val": self.best_top1_val
+        }
+        return checkpoint
         # return {"model": self.model,
         #         "optimizer": self.optimizer,
         #         "scheduler": self.scheduler,
         #         "epoch": self.epoch,
         #         "best_top1_val": self.best_top1_val
         #         }
-        return self.model
+        # return self.model

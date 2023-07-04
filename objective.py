@@ -79,15 +79,15 @@ class Objective(BaseObjective):
             sampler=test_sampler,
         )
 
-    def compute(self, model):
+    def compute(self, checkpoint):
         # print("compute")
         # print(x)
         # model, optimizer, scheduler, epoch, best_val_top_1 = x
-        # model = x["model"]
-        # optimizer = x["optimizer"]
-        # scheduler = x["scheduler"]
-        # epoch = x["epoch"]
-        # best_val_top1 = x["best_val_top1"]
+        model = checkpoint["model"]
+        optimizer = checkpoint["optimizer"]
+        scheduler = checkpoint["scheduler"]
+        epoch = checkpoint["epoch"]
+        best_val_top1 = checkpoint["best_val_top1"]
 
         # The arguments of this function are the outputs of the
         # `Solver.get_result`. This defines the benchmark's API to pass
@@ -121,14 +121,14 @@ class Objective(BaseObjective):
 
         # Save checkpoint here
         # TODO: only do this on rank 0 when multi-GPU
-        # is_best = False
-        # save_checkpoint({
-        #     'epoch': epoch + 1,
-        #     'state_dict': model.state_dict(),
-        #     'best_val_top_1': best_val_top1,
-        #     'optimizer': optimizer.state_dict(),
-        #     'scheduler': scheduler.state_dict() if scheduler is not None else None,
-        # }, is_best, dir="./checkpoints")
+        is_best = False
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'best_val_top_1': best_val_top1,
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict() if scheduler is not None else None,
+        }, is_best, dir="./checkpoints")
         # TODO exp_dir where to define?
 
         # This method can return many metrics in a dictionary. One of these
