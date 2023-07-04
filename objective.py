@@ -15,6 +15,7 @@ with safe_import_context() as import_ctx:
         simple_vit_s16_in1k,
         simple_vit_b16_in1k,
     )
+    from pathlib import Path
 
 
 # The benchmark objective must be named `Objective` and
@@ -83,6 +84,7 @@ class Objective(BaseObjective):
         # print("compute")
         # print(x)
         # model, optimizer, scheduler, epoch, best_val_top_1 = x
+
         model = checkpoint["model"]
         optimizer = checkpoint["optimizer"]
         scheduler = checkpoint["scheduler"]
@@ -122,13 +124,17 @@ class Objective(BaseObjective):
         # Save checkpoint here
         # TODO: only do this on rank 0 when multi-GPU
         is_best = False
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'state_dict': model.state_dict(),
-            'best_val_top_1': best_val_top1,
-            'optimizer': optimizer.state_dict(),
-            'scheduler': scheduler.state_dict() if scheduler is not None else None,
-        }, is_best, dir="./checkpoints")
+        save_checkpoint(
+            {
+                "epoch": epoch + 1,
+                "state_dict": model.state_dict(),
+                "best_val_top_1": best_val_top1,
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict() if scheduler is not None else None,
+            },
+            is_best,
+            directory=Path("./checkpoints"),
+        )
         # TODO exp_dir where to define?
 
         # This method can return many metrics in a dictionary. One of these
@@ -154,13 +160,15 @@ class Objective(BaseObjective):
     def get_one_solution(self):
         # Return one solution. The return value should be an object compatible
         # with `self.compute`. This is mainly for testing purposes.
-        # return {"model": self.get_model(),
-        #         "optimizer": None,
-        #         "scheduler": None,
-        #         "epoch": None,
-        #         "best_top1_val": None
-        #         }
-        return self.get_model()
+        checkpoint = {
+            "model": self.get_model(),
+            "optimizer": None,
+            "scheduler": None,
+            "epoch": None,
+            "best_top1_val": None,
+        }
+        return checkpoint
+        # return self.get_model()
 
     def get_objective(self):
         # Define the information to pass to each solver to run the benchmark.

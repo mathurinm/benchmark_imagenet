@@ -289,7 +289,7 @@ class Solver(BaseSolver):
         # Resume checkpoint? #TODO
 
         # Best validation accuracy
-        self.best_top1_val = 0
+        self.best_val_top1 = 0
 
         # Current epoch
         self.epoch = 0  # TODO epoch = start epoch?
@@ -305,7 +305,15 @@ class Solver(BaseSolver):
         # max_epochs
         callback.stopping_criterion.max_runs = self.epochs
 
-        while callback(self.model):
+        checkpoint = {
+            "model": self.model,
+            "optimizer": self.optimizer,
+            "scheduler": self.scheduler,
+            "epoch": self.epoch,
+            "best_val_top1": self.best_val_top1,
+        }
+
+        while callback(checkpoint):
             # time
             begin = time.time()
 
@@ -329,6 +337,13 @@ class Solver(BaseSolver):
                 self.mixup_alpha,
             )
             self.epoch += 1
+            checkpoint = {
+                "model": self.model,
+                "optimizer": self.optimizer,
+                "scheduler": self.scheduler,
+                "epoch": self.epoch,
+                "best_val_top1": self.best_val_top1,
+            }
 
     def get_result(self):
         # Return the result from one optimization run.
@@ -340,13 +355,6 @@ class Solver(BaseSolver):
             "optimizer": self.optimizer,
             "scheduler": self.scheduler,
             "epoch": self.epoch,
-            "best_top1_val": self.best_top1_val,
+            "best_val_top1": self.best_val_top1,
         }
         return checkpoint
-        # return {"model": self.model,
-        #         "optimizer": self.optimizer,
-        #         "scheduler": self.scheduler,
-        #         "epoch": self.epoch,
-        #         "best_top1_val": self.best_top1_val
-        #         }
-        return self.model
