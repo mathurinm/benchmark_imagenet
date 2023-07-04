@@ -169,11 +169,19 @@ class Objective(BaseObjective):
         # Return one solution. The return value should be an object compatible
         # with `self.compute`. This is mainly for testing purposes.
         solver_state = {
-            "model": self.get_model(),
+            "model": None,
             "optimizer": None,
             "scheduler": None,
             "epoch": None,
-            "best_top1_val": None,
+            "best_val_top1": None,
+            "logger": None,
+            "train_top1": None,
+            "train_top5": None,
+            "train_loss": None,
+            "batch_size": None,
+            "saving_path": None,
+            "lr": None,
+            "weight_decay": None,
         }
         return solver_state
         # return self.get_model()
