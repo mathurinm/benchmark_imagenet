@@ -4,19 +4,9 @@ from benchopt import BaseObjective, safe_import_context
 # - skipping import to speed up autocompletion in CLI.
 # - getting requirements info when all dependencies are not installed.
 with safe_import_context() as import_ctx:
-    import numpy as np
-    import torchvision.models as models
     import torch
     from benchmark_utils.accuracy import evaluate_acc_and_loss
     from benchmark_utils.checkpoint import save_checkpoint
-    from benchmark_utils.model.simple_vit import (
-        simple_vit_s16_in1k_butterfly,
-        simple_vit_b16_in1k_butterfly,
-        simple_vit_s16_in1k,
-        simple_vit_b16_in1k,
-    )
-    from pathlib import Path
-    from benchmark_utils.checkpoint import default_directory_checkpoint
 
 
 # The benchmark objective must be named `Objective` and
@@ -30,20 +20,11 @@ class Objective(BaseObjective):
     # All parameters 'p' defined here are available as 'self.p'.
     # This means the OLS objective will have a parameter `self.whiten_y`.
     parameters = {
-        "arch": ["simple_vit_s16_in1k"],
-        "pretrained": [False],
-        "butterfly": [False],
-        "num_debfly_layer": [24],
-        "debfly_version": ["densification"],
-        "chain_type": ["monarch"],
-        "monarch_blocks": [4],
-        "num_debfly_factors": [2],
-        "debfly_rank": [1],
-        "chain_idx": [0],
-        "batch_size": [128],
+        "batch_size_evaluate_metrics": [128],
         "workers": [4],
         "criterion": ["cross_entropy"],
     }
+    # les params du point de la grille actuelle sont accessible via self._parameters ? voir benchopt utils paramterized mixing : create instance (pour solver), mais ce serait dépendant de la release actuelle de benchopt donc pas une bonne idée
 
     # Minimal version of benchopt required to run this benchmark.
     # Bump it up if the benchmark depends on a new feature of benchopt.
@@ -66,7 +47,7 @@ class Objective(BaseObjective):
         # train loader is defined in the solver as it is only used to train the model
         self.val_loader = torch.utils.data.DataLoader(
             valset,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size_evaluate_metrics,
             shuffle=(val_sampler is None),
             num_workers=self.workers,
             pin_memory=True,
@@ -74,7 +55,7 @@ class Objective(BaseObjective):
         )
         self.test_loader = torch.utils.data.DataLoader(
             testset,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size_evaluate_metrics,
             shuffle=(test_sampler is None),
             num_workers=self.workers,
             pin_memory=True,
@@ -106,7 +87,7 @@ class Objective(BaseObjective):
         distributed = False
         world_size = None
         workers = self.workers
-        batch_size = self.batch_size
+        batch_size = self.batch_size_evaluate_metrics
         prefix_print = "val"
 
         val_top1, val_top5, val_loss = evaluate_acc_and_loss(
@@ -135,7 +116,7 @@ class Objective(BaseObjective):
                 "scheduler": scheduler.state_dict() if scheduler is not None else None,
             },
             is_best,
-            directory=default_directory_checkpoint,
+            directory=solver_state["saving_path"],
         )
         # TODO exp_dir where to define?
 
@@ -146,18 +127,20 @@ class Objective(BaseObjective):
                 "train/acc1": solver_state["train_top1"]
                 if isinstance(solver_state["train_top1"], float)
                 or isinstance(solver_state["train_top1"], int)
+                or solver_state["train_top1"] is None
                 else solver_state["train_top1"].item(),
                 "train/acc5": solver_state["train_top5"]
                 if isinstance(solver_state["train_top5"], float)
                 or isinstance(solver_state["train_top5"], int)
+                or solver_state["train_top5"] is None
                 else solver_state["train_top5"].item(),
                 "epoch": solver_state["epoch"],
-                "batch_size": self.batch_size,
-                "lr": self.scheduler.get_last_lr()[0]
-                if self.scheduler is not None
-                else self.lr,
+                "batch_size": solver_state["batch_size"],
+                "lr": solver_state["scheduler"].get_last_lr()[0]
+                if solver_state["scheduler"] is not None
+                else solver_state["lr"],
                 "memory": torch.cuda.max_memory_allocated() // (1024 * 1024),
-                "weight_decay": self.weight_decay,
+                "weight_decay": solver_state["weight_decay"],
             }
             print(metrics_dict)
             solver_state["logger"].log_step(metrics_dict, solver_state["epoch"])
@@ -201,36 +184,7 @@ class Objective(BaseObjective):
         # for `Solver.set_objective`. This defines the
         # benchmark's API for passing the objective to the solver.
         # It is customizable for each benchmark.
-        model = self.get_model()
 
         return dict(
-            model=model,
             trainset=self.trainset,
         )
-
-    def get_model(self):
-        # create model
-        if self.pretrained:
-            print("=> using pre-trained model '{}'".format(self.arch))
-            assert not self.butterfly
-            model = models.__dict__[self.arch](pretrained=True)
-        else:
-            print("=> creating model '{}'".format(self.arch))
-            if self.butterfly:
-                assert self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]
-                print("with butterfly structure")
-                model = eval(f"{self.arch}_butterfly")(
-                    num_debfly_layer=self.num_debfly_layer,
-                    version=self.debfly_version,
-                    chain_type=self.chain_type,
-                    monarch_blocks=self.monarch_blocks,
-                    num_debfly_factors=self.num_debfly_factors,
-                    rank=self.debfly_rank,
-                    chain_idx=self.chain_idx,
-                )
-            else:
-                if self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]:
-                    model = eval(self.arch)()
-                else:
-                    model = models.__dict__[self.arch]()
-        return model

@@ -18,6 +18,13 @@ with safe_import_context() as import_ctx:
     import os
     from benchmark_utils.checkpoint import default_directory_checkpoint
     from benchmark_utils.logger import Logger
+    import torchvision.models as models
+    from benchmark_utils.model.simple_vit import (
+        simple_vit_s16_in1k_butterfly,
+        simple_vit_b16_in1k_butterfly,
+        simple_vit_s16_in1k,
+        simple_vit_b16_in1k,
+    )
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
@@ -127,6 +134,16 @@ class Solver(BaseSolver):
     # the cross product for each key in the dictionary.
     # All parameters 'p' defined here are available as 'self.p'.
     parameters = {
+        "arch": ["simple_vit_s16_in1k"],
+        "pretrained": [False],
+        "butterfly": [False],
+        "num_debfly_layer": [24],
+        "debfly_version": ["densification"],
+        "chain_type": ["monarch"],
+        "monarch_blocks": [4],
+        "num_debfly_factors": [2],
+        "debfly_rank": [1],
+        "chain_idx": [0],
         "batch_size": [128],
         "lr": [0.001],
         "weight_decay": [0.0001],
@@ -147,6 +164,114 @@ class Solver(BaseSolver):
         "rank": [0],
         "log": [True],
     }
+
+    def path_from_keys(self, *keys):
+        path = default_directory_checkpoint
+        for key in keys:
+            if key == "warmup_percentage":
+                path = path / f"{key}={getattr(self, key):.3f}"
+            else:
+                path = path / f"{key}={getattr(self, key)}"
+        return path
+
+    def set_saving_path(self):
+        if self.butterfly:
+            if self.chain_type == "monarch":
+                self.saving_path = self.path_from_keys(
+                    "arch",
+                    "butterfly",
+                    "num_debfly_layer",
+                    "debfly_version",
+                    "chain_type",
+                    "monarch_blocks",
+                    "batch_size",
+                    "lr",
+                    "weight_decay",
+                    "lr_scheduler",
+                    "max_epochs",
+                    "warmup_percentage",
+                    "mixup_alpha",
+                    "clip_grad_norm",
+                    "amp",
+                )
+            elif self.chain_type == "low_rank":
+                self.saving_path = self.path_from_keys(
+                    "arch",
+                    "butterfly",
+                    "num_debfly_layer",
+                    "debfly_version",
+                    "chain_type",
+                    "debfly_rank",
+                    "batch_size",
+                    "lr",
+                    "weight_decay",
+                    "lr_scheduler",
+                    "max_epochs",
+                    "warmup_percentage",
+                    "mixup_alpha",
+                    "clip_grad_norm",
+                    "amp",
+                )
+            elif self.chain_type == "monotone-min-params":
+                self.saving_path = self.path_from_keys(
+                    "arch",
+                    "butterfly",
+                    "num_debfly_layer",
+                    "debfly_version",
+                    "chain_type",
+                    "num_debfly_factors",
+                    "debfly_rank",
+                    "chain_idx",
+                    "batch_size",
+                    "lr",
+                    "weight_decay",
+                    "lr_scheduler",
+                    "max_epochs",
+                    "warmup_percentage",
+                    "mixup_alpha",
+                    "clip_grad_norm",
+                    "amp",
+                )
+        else:
+            self.saving_path = self.path_from_keys(
+                "arch",
+                "batch_size",
+                "lr",
+                "weight_decay",
+                "lr_scheduler",
+                "max_epochs",
+                "warmup_percentage",
+                "mixup_alpha",
+                "clip_grad_norm",
+                "amp",
+            )
+
+    def get_model(self):
+        # create model
+        if self.pretrained:
+            print("=> using pre-trained model '{}'".format(self.arch))
+            assert not self.butterfly
+            model = models.__dict__[self.arch](pretrained=True)
+        else:
+            print("=> creating model '{}'".format(self.arch))
+            if self.butterfly:
+                assert self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]
+                print("with butterfly structure")
+                model = eval(f"{self.arch}_butterfly")(
+                    num_debfly_layer=self.num_debfly_layer,
+                    version=self.debfly_version,
+                    chain_type=self.chain_type,
+                    monarch_blocks=self.monarch_blocks,
+                    num_debfly_factors=self.num_debfly_factors,
+                    rank=self.debfly_rank,
+                    chain_idx=self.chain_idx,
+                )
+            else:
+                if self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]:
+                    model = eval(self.arch)()
+                else:
+                    model = models.__dict__[self.arch]()
+        return model
 
     def device_and_distributed_init_model(self):
         if not torch.cuda.is_available():
@@ -190,13 +315,13 @@ class Solver(BaseSolver):
             else:
                 self.model = torch.nn.DataParallel(self.model).cuda()
 
-    def set_objective(self, model, trainset):
+    def set_objective(self, trainset):
         # Define the information received by each solver from the objective.
         # The arguments of this function are the results of the
         # `Objective.get_objective`. This defines the benchmark's API for
         # passing the objective to the solver.
         # It is customizable for each benchmark.
-        self.model = model
+        self.model = self.get_model()
 
         self.device_and_distributed_init_model()
         # set_objective is launched once per solver's parameter combination while run is launched several times for a given solver's parameter combination so we define what is common to all runs (trainloader...) here to avoid an overhead at each run
@@ -293,8 +418,11 @@ class Solver(BaseSolver):
         else:
             raise NotImplementedError
 
-        # create logger for saving stats in csv
+        # set saving path for checkpoints and logger
 
+        self.set_saving_path()
+
+        # create logger for saving stats in csv
         # logger to save in csv
         self.logger = None
         if self.log:
@@ -310,11 +438,9 @@ class Solver(BaseSolver):
                 "seed",
                 "dp_epsilon",
             ]
-            csv_dir = default_directory_checkpoint / f"rank={self.rank}" / "csv"
+            csv_dir = self.saving_path / f"rank={self.rank}" / "csv"
             if self.tensorboard:
-                tensorboard_dir = (
-                    default_directory_checkpoint / f"rank={self.rank}" / "tensorboard"
-                )
+                tensorboard_dir = self.saving_path / f"rank={self.rank}" / "tensorboard"
             else:
                 tensorboard_dir = None
             self.logger = Logger(
@@ -342,6 +468,10 @@ class Solver(BaseSolver):
             "train_top1": None,
             "train_top5": None,
             "train_loss": None,
+            "batch_size": self.batch_size,
+            "saving_path": self.saving_path,
+            "lr": self.lr,
+            "weight_decay": self.weight_decay,
         }
 
         # optionally resume from a checkpoint
@@ -416,7 +546,15 @@ class Solver(BaseSolver):
             "model": self.model,
             "optimizer": self.optimizer,
             "scheduler": self.scheduler,
-            "epoch": self.epoch,
-            "best_val_top1": self.best_val_top1,
+            "epoch": 0,
+            "best_val_top1": 0,
+            "logger": None,
+            "train_top1": None,
+            "train_top5": None,
+            "train_loss": None,
+            "batch_size": self.batch_size,
+            "saving_path": self.saving_path,
+            "lr": self.lr,
+            "weight_decay": self.weight_decay,
         }
         return solver_state
