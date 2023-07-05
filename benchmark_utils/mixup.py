@@ -21,7 +21,13 @@ class RandomMixup(torch.nn.Module):
         inplace (bool): boolean to make this transform inplace. Default set to False.
     """
 
-    def __init__(self, num_classes: int, p: float = 0.5, alpha: float = 1.0, inplace: bool = False) -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        p: float = 0.5,
+        alpha: float = 1.0,
+        inplace: bool = False,
+    ) -> None:
         super().__init__()
 
         if num_classes < 1:
@@ -50,9 +56,13 @@ class RandomMixup(torch.nn.Module):
         if target.ndim != 1:
             raise ValueError(f"Target ndim should be 1. Got {target.ndim}")
         if not batch.is_floating_point():
-            raise TypeError(f"Batch dtype should be a float tensor. Got {batch.dtype}.")
+            raise TypeError(
+                f"Batch dtype should be a float tensor. Got {batch.dtype}."
+            )
         if target.dtype != torch.int64:
-            raise TypeError(f"Target dtype should be torch.int64. Got {target.dtype}")
+            raise TypeError(
+                f"Target dtype should be torch.int64. Got {target.dtype}"
+            )
 
         if not self.inplace:
             batch = batch.clone()
@@ -60,7 +70,8 @@ class RandomMixup(torch.nn.Module):
 
         if target.ndim == 1:
             target = torch.nn.functional.one_hot(
-                target, num_classes=self.num_classes).to(dtype=batch.dtype)
+                target, num_classes=self.num_classes
+            ).to(dtype=batch.dtype)
 
         if torch.rand(1).item() >= self.p:
             return batch, target
@@ -70,8 +81,9 @@ class RandomMixup(torch.nn.Module):
         target_rolled = target.roll(1, 0)
 
         # Implemented as on mixup paper, page 3.
-        lambda_param = float(torch._sample_dirichlet(
-            torch.tensor([self.alpha, self.alpha]))[0])
+        lambda_param = float(
+            torch._sample_dirichlet(torch.tensor([self.alpha, self.alpha]))[0]
+        )
         batch_rolled.mul_(1.0 - lambda_param)
         batch.mul_(lambda_param).add_(batch_rolled)
 

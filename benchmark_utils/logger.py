@@ -12,7 +12,9 @@ with safe_import_context() as import_ctx:
 
 
 class Logger:
-    def __init__(self, metrics_name, csv_dir, tensorboard_dir=None, verbose=False):
+    def __init__(
+        self, metrics_name, csv_dir, tensorboard_dir=None, verbose=False
+    ):
         # now = datetime.now()
         # dt_string = now.strftime("%Y-%m-%d-%H-%M-%S")
         self.metrics_name = metrics_name
@@ -44,7 +46,9 @@ class Logger:
                     self.writer.add_scalar(k, v, step)
 
         if self.verbose:
-            print_str = "\t".join([f"{k} {v:.4f}" for k, v in metrics_dict.items()])
+            print_str = "\t".join(
+                [f"{k} {v:.4f}" for k, v in metrics_dict.items()]
+            )
             print(print_str)
 
         # f"Epoch: [{current_epoch}][{step}]\t"

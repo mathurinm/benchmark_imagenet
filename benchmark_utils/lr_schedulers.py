@@ -19,7 +19,9 @@ class WarmupMultistep:
         if iteration <= self.warmup_iterations:
             factor = iteration / self.warmup_iterations
         else:
-            power = bisect.bisect_right(self.milestones_in_iterations, iteration)
+            power = bisect.bisect_right(
+                self.milestones_in_iterations, iteration
+            )
             factor = self.gamma**power
         return factor
 

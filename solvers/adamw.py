@@ -103,7 +103,9 @@ def train_single_epoch(
             scaler.scale(loss).backward()
             if clip_grad_norm is not None:
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), clip_grad_norm
+                )
             scaler.step(optimizer)
             scaler.update()
 
@@ -129,7 +131,9 @@ class Solver(BaseSolver):
     name = "adamw"
     stopping_strategy = "callback"
 
-    stopping_criterion = SufficientProgressCriterion(patience=60, strategy="callback")
+    stopping_criterion = SufficientProgressCriterion(
+        patience=60, strategy="callback"
+    )
     # List of parameters for the solver. The benchmark will consider
     # the cross product for each key in the dictionary.
     # All parameters 'p' defined here are available as 'self.p'.
@@ -255,7 +259,10 @@ class Solver(BaseSolver):
         else:
             print("=> creating model '{}'".format(self.arch))
             if self.butterfly:
-                assert self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]
+                assert self.arch in [
+                    "simple_vit_s16_in1k",
+                    "simple_vit_b16_in1k",
+                ]
                 print("with butterfly structure")
                 model = eval(f"{self.arch}_butterfly")(
                     num_debfly_layer=self.num_debfly_layer,
@@ -299,7 +306,9 @@ class Solver(BaseSolver):
                     self.model.cuda()
                     # DistributedDataParallel will divide and allocate batch_size to all
                     # available GPUs if device_ids are not set
-                    self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+                    self.model = torch.nn.parallel.DistributedDataParallel(
+                        self.model
+                    )
         elif self.gpu is not None and torch.cuda.is_available():
             torch.cuda.set_device(self.gpu)
             self.model = self.model.cuda(self.gpu)
@@ -395,7 +404,9 @@ class Solver(BaseSolver):
             ]
             csv_dir = self.saving_path / f"rank={self.rank}" / "csv"
             if self.tensorboard:
-                tensorboard_dir = self.saving_path / f"rank={self.rank}" / "tensorboard"
+                tensorboard_dir = (
+                    self.saving_path / f"rank={self.rank}" / "tensorboard"
+                )
             else:
                 tensorboard_dir = None
             self.logger = Logger(
@@ -489,34 +500,48 @@ class Solver(BaseSolver):
         # optionally resume from a checkpoint
         if self.resume_from_path:
             if os.path.isfile(self.resume_from_path):
-                print("=> loading checkpoint '{}'".format(self.resume_from_path))
+                print(
+                    "=> loading checkpoint '{}'".format(self.resume_from_path)
+                )
                 if self.gpu is None:
                     checkpoint = torch.load(self.resume_from_path)
                 elif torch.cuda.is_available():
                     # Map model to be loaded to specified single gpu.
                     loc = "cuda:{}".format(self.gpu)
-                    checkpoint = torch.load(self.resume_from_path, map_location=loc)
+                    checkpoint = torch.load(
+                        self.resume_from_path, map_location=loc
+                    )
 
                     # best_val_top_1 may be from a checkpoint from a different GPU
                 solver_state["model"].load_state_dict(checkpoint["state_dict"])
-                solver_state["optimizer"].load_state_dict(checkpoint["optimizer"])
+                solver_state["optimizer"].load_state_dict(
+                    checkpoint["optimizer"]
+                )
                 if solver_state["scheduler"] is not None:
-                    solver_state["scheduler"].load_state_dict(checkpoint["scheduler"])
+                    solver_state["scheduler"].load_state_dict(
+                        checkpoint["scheduler"]
+                    )
                 solver_state["epoch"] = checkpoint["epoch"]
                 if self.gpu is not None:
-                    solver_state["best_val_top1"] = checkpoint["best_val_top1"].to(
-                        self.gpu
-                    )
+                    solver_state["best_val_top1"] = checkpoint[
+                        "best_val_top1"
+                    ].to(self.gpu)
                 print(
                     "=> loaded checkpoint '{}' (epoch {})".format(
                         self.resume_from_path, checkpoint["epoch"]
                     )
                 )
             else:
-                print("=> no checkpoint found at '{}'".format(self.resume_from_path))
+                print(
+                    "=> no checkpoint found at '{}'".format(
+                        self.resume_from_path
+                    )
+                )
 
         # max_epochs
-        callback.stopping_criterion.max_runs = self.max_epochs - solver_state["epoch"]
+        callback.stopping_criterion.max_runs = (
+            self.max_epochs - solver_state["epoch"]
+        )
 
         while callback(solver_state):
             # time

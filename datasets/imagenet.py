@@ -58,9 +58,13 @@ def get_imagenet_train_val_test(
 ):
     # Data loading code
     print(f"=> Getting data from {imagenet_data}")
-    traindir = os.path.join(imagenet_data, "train_blurred" if blurred else "train")
+    traindir = os.path.join(
+        imagenet_data, "train_blurred" if blurred else "train"
+    )
     valdir = os.path.join(imagenet_data, "val_blurred" if blurred else "val")
-    basic_transforms, augmentation_transforms = get_imagenet_transforms(randAugLevel)
+    basic_transforms, augmentation_transforms = get_imagenet_transforms(
+        randAugLevel
+    )
 
     print(f"=> Creating datasets")
 
@@ -68,9 +72,13 @@ def get_imagenet_train_val_test(
         f"Full dataset. Train set is splitted into {FULL_SPLIT_TRAIN_VAL} / {1 - FULL_SPLIT_TRAIN_VAL} for training and validation."
     )
     if not return_index:
-        train_val_augmented = datasets.ImageFolder(traindir, augmentation_transforms)
+        train_val_augmented = datasets.ImageFolder(
+            traindir, augmentation_transforms
+        )
     else:
-        train_val_augmented = ReturnIndexDataset(traindir, augmentation_transforms)
+        train_val_augmented = ReturnIndexDataset(
+            traindir, augmentation_transforms
+        )
     trainset, _, _, _, _, _ = imagetnet_dataset_splitted(
         SEED_FOR_SPLITTING,
         train_val_augmented,
@@ -126,7 +134,8 @@ def get_imagenet_transforms(randAugLevel):
                 ),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandAugment(
-                    interpolation=InterpolationMode.BILINEAR, magnitude=randAugLevel
+                    interpolation=InterpolationMode.BILINEAR,
+                    magnitude=randAugLevel,
                 ),
                 transforms.ToTensor(),
                 normalize,
@@ -182,7 +191,9 @@ def random_partition(seed, x, *sizes):
     return subsets
 
 
-def split_class_indices(indices, x_ttrain, x_tval, x_ttest, x_strain, x_sval, x_stest):
+def split_class_indices(
+    indices, x_ttrain, x_tval, x_ttest, x_strain, x_sval, x_stest
+):
     """x are proportions. The sum should be 1"""
     assert x_ttrain + x_tval + x_ttest + x_strain + x_sval + x_stest
     size = len(indices)
@@ -194,7 +205,12 @@ def split_class_indices(indices, x_ttrain, x_tval, x_ttest, x_strain, x_sval, x_
     size_stest = int(x_stest * size)
 
     subset_sum = (
-        size_ttrain + size_tval + size_ttest + size_strain + size_sval + size_stest
+        size_ttrain
+        + size_tval
+        + size_ttest
+        + size_strain
+        + size_sval
+        + size_stest
     )
     remaining = size - subset_sum
 
@@ -207,11 +223,23 @@ def split_class_indices(indices, x_ttrain, x_tval, x_ttest, x_strain, x_sval, x_
             size_strain += remaining // 2
 
     assert (
-        size_ttrain + size_tval + size_ttest + size_strain + size_sval + size_stest
+        size_ttrain
+        + size_tval
+        + size_ttest
+        + size_strain
+        + size_sval
+        + size_stest
         == size
     )
 
-    return size_ttrain, size_tval, size_ttest, size_strain, size_sval, size_stest
+    return (
+        size_ttrain,
+        size_tval,
+        size_ttest,
+        size_strain,
+        size_sval,
+        size_stest,
+    )
 
 
 def labels2inds_split_subset(

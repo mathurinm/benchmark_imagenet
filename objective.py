@@ -113,7 +113,9 @@ class Objective(BaseObjective):
                 "state_dict": model.state_dict(),
                 "best_val_top_1": solver_state["best_val_top1"],
                 "optimizer": optimizer.state_dict(),
-                "scheduler": scheduler.state_dict() if scheduler is not None else None,
+                "scheduler": scheduler.state_dict()
+                if scheduler is not None
+                else None,
             },
             is_best,
             directory=solver_state["saving_path"],
