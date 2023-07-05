@@ -8,11 +8,13 @@ reproducible the comparisons of optimization algorithms.
 This benchmark is dedicated to ImageNet-1k classification problem.
 
 TLDR: To run the benchmark, run the following command (NOTE THE QUOTES on the data_path, this is required for now to avoid parsing issues that will be fix soon by CLI `587 <https://github.com/benchopt/benchopt/issues/587>`_):
+
 .. code-block::
 
 	$ benchopt run benchmark_imagenet -s adamw[max_epochs=90,lr=0.001,amp=True] -d imagenet[data_path='"path/to/imagenet"']
 
 where the path to ImageNet is user specific and should contains two subfolders: train/ and val/ containing respectively the official training set of ImageNet and the official validation set. Alternatively, you can update runner_config.yml and run
+
 .. code-block::
 
 	$ benchopt run . --config runner_config.yml
