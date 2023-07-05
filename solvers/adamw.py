@@ -19,14 +19,12 @@ with safe_import_context() as import_ctx:
     from benchmark_utils.checkpoint import default_directory_checkpoint
     from benchmark_utils.logger import Logger
     import torchvision.models as models
-    from benchmark_utils.model.simple_vit import *
-
-    # (
-    #     simple_vit_s16_in1k_butterfly,
-    #     simple_vit_b16_in1k_butterfly,
-    #     simple_vit_s16_in1k,
-    #     simple_vit_b16_in1k,
-    # )
+    from benchmark_utils.model.simple_vit import (
+        simple_vit_s16_in1k_butterfly,
+        simple_vit_b16_in1k_butterfly,
+        simple_vit_s16_in1k,
+        simple_vit_b16_in1k,
+    )
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
@@ -557,12 +555,11 @@ class Solver(BaseSolver):
         )
 
         while callback(solver_state):
-            # time
-            begin = time.time()
-
-            if self.distributed:
-                raise NotImplementedError
-                train_sampler.set_epoch(epoch)
+            # if self.distributed:
+            #     raise NotImplementedError
+            #     solver_state["train_sampler"].set_epoch(
+            # solver_state["epoch"]
+            # )
 
             # train for one epoch
             (

@@ -5,7 +5,6 @@ from benchopt import BaseDataset, safe_import_context
 # - skipping import to speed up autocompletion in CLI.
 # - getting requirements info when all dependencies are not installed.
 with safe_import_context() as import_ctx:
-    import numpy as np
     import torchvision.datasets as datasets
     import torchvision.transforms as transforms
 

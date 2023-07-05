@@ -66,7 +66,7 @@ def get_imagenet_train_val_test(
         randAugLevel
     )
 
-    print(f"=> Creating datasets")
+    print("=> Creating datasets")
 
     print(
         "Full dataset. Train set is splitted into "
