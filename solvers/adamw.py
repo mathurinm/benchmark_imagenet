@@ -19,9 +19,10 @@ with safe_import_context() as import_ctx:
     from benchmark_utils.checkpoint import default_directory_checkpoint
     from benchmark_utils.logger import Logger
     import torchvision.models as models
+
     from benchmark_utils.model.simple_vit import (
-        simple_vit_s16_in1k_butterfly,
-        simple_vit_b16_in1k_butterfly,
+        #     simple_vit_s16_in1k_butterfly,
+        #     simple_vit_b16_in1k_butterfly,
         simple_vit_s16_in1k,
         simple_vit_b16_in1k,
     )
@@ -259,23 +260,29 @@ class Solver(BaseSolver):
         else:
             print("=> creating model '{}'".format(self.arch))
             if self.butterfly:
-                assert self.arch in [
-                    "simple_vit_s16_in1k",
-                    "simple_vit_b16_in1k",
-                ]
-                print("with butterfly structure")
-                model = eval(f"{self.arch}_butterfly")(
-                    num_debfly_layer=self.num_debfly_layer,
-                    version=self.debfly_version,
-                    chain_type=self.chain_type,
-                    monarch_blocks=self.monarch_blocks,
-                    num_debfly_factors=self.num_debfly_factors,
-                    rank=self.debfly_rank,
-                    chain_idx=self.chain_idx,
-                )
+                raise NotImplementedError
+                # assert self.arch in [
+                #     "simple_vit_s16_in1k",
+                #     "simple_vit_b16_in1k",
+                # ]
+                # print("with butterfly structure")
+                # model = eval(f"{self.arch}_butterfly")(
+                #     num_debfly_layer=self.num_debfly_layer,
+                #     version=self.debfly_version,
+                #     chain_type=self.chain_type,
+                #     monarch_blocks=self.monarch_blocks,
+                #     num_debfly_factors=self.num_debfly_factors,
+                #     rank=self.debfly_rank,
+                #     chain_idx=self.chain_idx,
+                # )
             else:
-                if self.arch in ["simple_vit_s16_in1k", "simple_vit_b16_in1k"]:
-                    model = eval(self.arch)()
+                if self.arch == "simple_vit_s16_in1k":
+                    model = simple_vit_s16_in1k()
+                elif self.arch == "simple_vit_b16_in1k":
+                    model = simple_vit_b16_in1k()
+                # if self.arch in ["simple_vit_s16_in1k",
+                # "simple_vit_b16_in1k"]:
+                #     model = eval(self.arch)()
                 else:
                     model = models.__dict__[self.arch]()
         return model
