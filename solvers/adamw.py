@@ -164,7 +164,9 @@ class Solver(BaseSolver):
         "gpu": [None],
         "device_ids": [None],
         "print_freq": [10],
-        "resume_from_path": ["./checkpoints/model_best.pth.tar"],  # [None]
+        "resume_from_path": [
+            None
+        ],  # ["./checkpoints/model_best.pth.tar"],  # [None]
         "tensorboard": [False],
         "rank": [0],
         "log": [True],

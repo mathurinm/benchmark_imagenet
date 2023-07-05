@@ -31,7 +31,7 @@ class Dataset(BaseDataset):
     # the cross product for each key in the dictionary.
     # Any parameters 'param' defined here is available as `self.param`.
     parameters = {
-        # "data": ["/datasets_local/ImageNet"], #[1281167],
+        "data_path": [None],
         "blurred": [False],
         "random_augmentation_magnitude": [10],
     }
@@ -42,7 +42,7 @@ class Dataset(BaseDataset):
         # API to pass data. It is customizable for each benchmark.
 
         trainset, valset, testset = get_imagenet_train_val_test(
-            "/datasets_local/ImageNet",
+            self.data_path,
             self.blurred,
             randAugLevel=self.random_augmentation_magnitude,
         )

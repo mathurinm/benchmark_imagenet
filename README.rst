@@ -5,17 +5,16 @@ My Benchopt Benchmark
 
 Benchopt is a package to simplify and make more transparent and
 reproducible the comparisons of optimization algorithms.
-This benchmark is dedicated to solver of **describe your problem**:
+This benchmark is dedicated to ImageNet-1k classification problem.
 
+Tl;dr: To run the benchmark, run the following commands:
+.. code-block::
 
-$$\\min_{w} f(X, w)$$
+	$ benchopt run benchmark_imagenet -s adamw[max_epochs=90,lr=0.001,amp=True] -d imagenet[data_path=path/to/imagenet]
 
+where the path to ImageNet is user specific and should contains two subfolders: train/ and val/ containing respectively the official training set of ImageNet and the official validation set. All the options for the solver and the datasets can be bound in the sources of the corresponding files, in the paramaters dictionnary of the classes Solver and DataSet.
 
-where $n$ (or ``n_samples``) stands for the number of samples, $p$ (or ``n_features``) stands for the number of features and
-
-
-$$X \\in \\mathbb{R}^{n \\times p} \\ , \\quad w \\in \\mathbb{R}^p$$
-
+For now, this only runs on single GPU.
 
 Install
 --------
@@ -27,12 +26,6 @@ This benchmark can be run using the following commands:
    $ pip install -U benchopt
    $ git clone https://github.com/agonon/benchmark_imagenet
    $ benchopt run benchmark_imagenet
-
-Apart from the problem, options can be passed to ``benchopt run``, to restrict the benchmarks to some solvers or datasets, e.g.:
-
-.. code-block::
-
-	$ benchopt run benchmark_imagenet -s solver1 -d dataset2 --max-runs 10 --n-repetitions 10
 
 
 Use ``benchopt run -h`` for more details about these options, or visit https://benchopt.github.io/api.html.
