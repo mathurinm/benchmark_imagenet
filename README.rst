@@ -1,5 +1,5 @@
 
-My Benchopt Benchmark
+ImageNet-1k Benchmark
 =====================
 |Build Status| |Python 3.6+|
 
