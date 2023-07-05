@@ -12,7 +12,6 @@ with safe_import_context() as import_ctx:
 
 # All datasets must be named `Dataset` and inherit from `BaseDataset`
 class Dataset(BaseDataset):
-
     # Name to select the dataset in the CLI and to display the results.
     name = "dummy"
 
@@ -20,9 +19,9 @@ class Dataset(BaseDataset):
     # the cross product for each key in the dictionary.
     # Any parameters 'param' defined here is available as `self.param`.
     parameters = {
-        "trainsize": [128 * 10], #[1281167],
-        "valsize": [128 * 10], #[50000],
-        "testsize": [128 * 10], #[50000],
+        "trainsize": [128 * 10],  # [1281167],
+        "valsize": [128 * 10],  # [50000],
+        "testsize": [128 * 10],  # [50000],
     }
 
     def get_data(self):
@@ -31,12 +30,15 @@ class Dataset(BaseDataset):
         # API to pass data. It is customizable for each benchmark.
 
         data_dict = dict(
-            trainset = datasets.FakeData(
-            self.trainsize, (3, 224, 224), 1000, transforms.ToTensor()),
-            valset = datasets.FakeData(
-                self.valsize, (3, 224, 224), 1000, transforms.ToTensor()),
-            testset = datasets.FakeData(
-                self.testsize, (3, 224, 224), 1000, transforms.ToTensor())
+            trainset=datasets.FakeData(
+                self.trainsize, (3, 224, 224), 1000, transforms.ToTensor()
+            ),
+            valset=datasets.FakeData(
+                self.valsize, (3, 224, 224), 1000, transforms.ToTensor()
+            ),
+            testset=datasets.FakeData(
+                self.testsize, (3, 224, 224), 1000, transforms.ToTensor()
+            ),
         )
         # The dictionary defines the keyword arguments for `Objective.set_data`
         return data_dict

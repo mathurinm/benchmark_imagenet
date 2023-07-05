@@ -69,7 +69,9 @@ def get_imagenet_train_val_test(
     print(f"=> Creating datasets")
 
     print(
-        f"Full dataset. Train set is splitted into {FULL_SPLIT_TRAIN_VAL} / {1 - FULL_SPLIT_TRAIN_VAL} for training and validation."
+        "Full dataset. Train set is splitted into "
+        + f"{FULL_SPLIT_TRAIN_VAL} / {1 - FULL_SPLIT_TRAIN_VAL}"
+        + " for training and validation."
     )
     if not return_index:
         train_val_augmented = datasets.ImageFolder(

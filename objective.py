@@ -24,7 +24,6 @@ class Objective(BaseObjective):
         "workers": [4],
         "criterion": ["cross_entropy"],
     }
-    # les params du point de la grille actuelle sont accessible via self._parameters ? voir benchopt utils paramterized mixing : create instance (pour solver), mais ce serait dépendant de la release actuelle de benchopt donc pas une bonne idée
 
     # Minimal version of benchopt required to run this benchmark.
     # Bump it up if the benchmark depends on a new feature of benchopt.
@@ -42,9 +41,10 @@ class Objective(BaseObjective):
         val_sampler = None
         test_sampler = None
 
-        # define only val and test loaders since they are used at the end of each epoch
-        # to compute the validation and test metrics
-        # train loader is defined in the solver as it is only used to train the model
+        # define only val and test loaders since they are used at the end of
+        # each epoch # to compute the validation and test metrics
+        # train loader is defined in the solver as it is only used to train
+        # the model
         self.val_loader = torch.utils.data.DataLoader(
             valset,
             batch_size=self.batch_size_evaluate_metrics,
@@ -120,7 +120,6 @@ class Objective(BaseObjective):
             is_best,
             directory=solver_state["saving_path"],
         )
-        # TODO exp_dir where to define?
 
         # log
         if solver_state["logger"] is not None:
@@ -145,7 +144,9 @@ class Objective(BaseObjective):
                 "weight_decay": solver_state["weight_decay"],
             }
             print(metrics_dict)
-            solver_state["logger"].log_step(metrics_dict, solver_state["epoch"])
+            solver_state["logger"].log_step(
+                metrics_dict, solver_state["epoch"]
+            )
 
         # This method can return many metrics in a dictionary. One of these
         # metrics needs to be `value` for convergence detection purposes.

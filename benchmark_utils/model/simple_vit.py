@@ -71,7 +71,9 @@ def calculate_shape_debfly_feed_forward(
 ):
     result = []
     first_generator = DebflyGen(hidden_dim, dim, rank)  # outsize, insize, rank
-    second_generator = DebflyGen(dim, hidden_dim, rank)  # outsize, insize, rank
+    second_generator = DebflyGen(
+        dim, hidden_dim, rank
+    )  # outsize, insize, rank
 
     if chain_type == "monotone_min_param":
         assert (
@@ -150,7 +152,9 @@ class DebflyFeedForward(nn.Module):
             )  # insize, outsize
         else:
             linear2 = nn.Linear(hidden_dim, dim)
-        self.net = nn.Sequential(nn.LayerNorm(dim), linear1, nn.GELU(), linear2)
+        self.net = nn.Sequential(
+            nn.LayerNorm(dim), linear1, nn.GELU(), linear2
+        )
 
     def forward(self, x):
         return self.net(x)
@@ -260,9 +264,9 @@ class SimpleViT(nn.Module):
             image_height % patch_height == 0 and image_width % patch_width == 0
         ), "Image dimensions must be divisible by the patch size."
 
-        num_patches = (image_height // patch_height) * (
-            image_width // patch_width
-        )
+        # num_patches = (image_height // patch_height) * (
+        #     image_width // patch_width
+        # )
         patch_dim = channels * patch_height * patch_width
 
         self.to_patch_embedding = nn.Sequential(
@@ -293,7 +297,8 @@ class SimpleViT(nn.Module):
         )
 
     def forward(self, img):
-        *_, h, w, dtype = *img.shape, img.dtype
+        # *_, h, w, dtype = *img.shape, img.dtype
+        *_, _, _, _ = *img.shape, img.dtype
 
         x = self.to_patch_embedding(img)
         pe = posemb_sincos_2d(x)

@@ -29,7 +29,8 @@ class WarmupMultistep:
 def scheduler_linear_warmup_and_multistep(
     optimizer, gamma, warmup_iterations, milestones_in_iterations
 ):
-    """This scheduler will be called at each training iteration, not at each epoch"""
+    """This scheduler will be called at each training iteration, not at each
+    epoch"""
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
         WarmupMultistep(warmup_iterations, milestones_in_iterations, gamma),
@@ -59,7 +60,9 @@ class WarmupCosine:
 def scheduler_linear_warmup_and_cosine(
     optimizer, initial_lr, warmup_iterations, max_iterations, min_lr=0.0
 ):
-    # min_lr = 0 because: https://github.com/google-research/big_vision/blob/47ac2fd075fcb66cadc0e39bd959c78a6080070d/big_vision/utils.py#L929
+    # min_lr = 0 because:
+    # https://github.com/google-research/big_vision/blob
+    # /47ac2fd075fcb66cadc0e39bd959c78a6080070d/big_vision/utils.py#L929
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
         WarmupCosine(

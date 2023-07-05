@@ -19,12 +19,14 @@ with safe_import_context() as import_ctx:
     from benchmark_utils.checkpoint import default_directory_checkpoint
     from benchmark_utils.logger import Logger
     import torchvision.models as models
-    from benchmark_utils.model.simple_vit import (
-        simple_vit_s16_in1k_butterfly,
-        simple_vit_b16_in1k_butterfly,
-        simple_vit_s16_in1k,
-        simple_vit_b16_in1k,
-    )
+    from benchmark_utils.model.simple_vit import *
+
+    # (
+    #     simple_vit_s16_in1k_butterfly,
+    #     simple_vit_b16_in1k_butterfly,
+    #     simple_vit_s16_in1k,
+    #     simple_vit_b16_in1k,
+    # )
 
 X_LR_DECAY_EPOCH = [30 / 90, 60 / 90, 80 / 90]
 
@@ -284,8 +286,8 @@ class Solver(BaseSolver):
         if not torch.cuda.is_available():
             print("using CPU, this will be slow")
         elif self.distributed:
-            # For multiprocessing distributed, DistributedDataParallel constructor
-            # should always set the single device scope, otherwise,
+            # For multiprocessing distributed, DistributedDataParallel
+            # constructor should always set the single device scope, otherwise,
             # DistributedDataParallel will use all available devices.
             if torch.cuda.is_available():
                 print("Using DDP")
@@ -294,9 +296,11 @@ class Solver(BaseSolver):
                     self.model.cuda(self.gpu)
                     # When using a single GPU per process and per
                     # DistributedDataParallel, we need to divide the batch size
-                    # ourselves based on the total number of GPUs of the current node.
+                    # ourselves based on the total number of GPUs of the
+                    # current node.
                     # args.batch_size = int(args.batch_size / ngpus_per_node)
-                    # args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
+                    # args.workers = int((args.workers + ngpus_per_node - 1)
+                    # / ngpus_per_node)
                     assert self.batch_size % self.world_size == 0
                     self.batch_size = self.batch_size // self.world_size
                     self.model = torch.nn.parallel.DistributedDataParallel(
@@ -304,8 +308,9 @@ class Solver(BaseSolver):
                     )
                 else:
                     self.model.cuda()
-                    # DistributedDataParallel will divide and allocate batch_size to all
-                    # available GPUs if device_ids are not set
+                    # DistributedDataParallel will divide and allocate
+                    # batch_size to all # available GPUs if device_ids are
+                    # not set
                     self.model = torch.nn.parallel.DistributedDataParallel(
                         self.model
                     )
@@ -316,7 +321,8 @@ class Solver(BaseSolver):
         #     device = torch.device("mps")
         #     model = model.to(device)
         else:
-            # DataParallel will divide and allocate batch_size to all available GPUs
+            # DataParallel will divide and allocate batch_size to all available
+            # GPUs
             if self.device_ids is not None:
                 self.model = torch.nn.DataParallel(
                     self.model, device_ids=self.device_ids
@@ -382,7 +388,8 @@ class Solver(BaseSolver):
             )
             print(f"scheduler warmup iterations: {warmup_iterations}")
             print(
-                f"scheduler milestones in iteration number: {milestones_in_iterations}"
+                "scheduler milestones in iteration number:"
+                + f" {milestones_in_iterations}"
             )
         else:
             raise NotImplementedError
@@ -422,7 +429,10 @@ class Solver(BaseSolver):
         self.model = self.get_model()
 
         self.device_and_distributed_init_model()
-        # set_objective is launched once per solver's parameter combination while run is launched several times for a given solver's parameter combination so we define what is common to all runs (trainloader...) here to avoid an overhead at each run
+        # set_objective is launched once per solver's parameter combination
+        # while run is launched several times for a given solver's parameter
+        # combination so we define what is common to all runs (trainloader...)
+        # here to avoid an overhead at each run
 
         # trainloader
 
@@ -478,9 +488,11 @@ class Solver(BaseSolver):
 
     def run(self, callback):
         # This is the function that is called to evaluate the solver.
-        # It runs the algorithm for a given a number of iterations `max_epochs`.
+        # It runs the algorithm for a given a number of iterations `max_epochs`
 
-        # something that carries everything we want to save or track (logging in csv is done in compute() of objective and not in run() of solver to avoid time measurements of logging)
+        # something that carries everything we want to save or track (logging
+        # in csv is done in compute() of objective and not in run() of solver
+        # to avoid time measurements of logging)
         solver_state = {
             "model": self.model,
             "optimizer": self.optimizer,
@@ -512,7 +524,8 @@ class Solver(BaseSolver):
                         self.resume_from_path, map_location=loc
                     )
 
-                    # best_val_top_1 may be from a checkpoint from a different GPU
+                    # best_val_top_1 may be from a checkpoint from a different
+                    # GPU
                 solver_state["model"].load_state_dict(checkpoint["state_dict"])
                 solver_state["optimizer"].load_state_dict(
                     checkpoint["optimizer"]
@@ -571,7 +584,8 @@ class Solver(BaseSolver):
                 self.mixup_alpha,
             )
             solver_state["epoch"] += 1
-            # best val top 1 is updated in the compute function of the objective
+            # best val top 1 is updated in the compute function of the
+            # objective
 
     def get_result(self):
         # Return the result from one optimization run.

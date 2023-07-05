@@ -5,20 +5,27 @@ with safe_import_context() as import_ctx:
     from torch import Tensor
     from typing import Tuple
 
-# taken from https://github.com/pytorch/vision/blob/2925df7cdf349f51dbda463d59569067e8a87c43/references/classification/transforms.py
-# alternatively, use from torchvision.references.classification.transforms import RandomMixup
+# taken from
+# https://github.com/pytorch/vision/blob
+# /2925df7cdf349f51dbda463d59569067e8a87c43/references
+# /classification/transforms.py
+# alternatively, use from torchvision.references.classification.transforms
+# import RandomMixup
 
 
 class RandomMixup(torch.nn.Module):
     """Randomly apply Mixup to the provided batch and targets.
     The class implements the data augmentations as described in the paper
-    `"mixup: Beyond Empirical Risk Minimization" <https://arxiv.org/abs/1710.09412>`_.
+    `"mixup: Beyond Empirical Risk Minimization"
+    <https://arxiv.org/abs/1710.09412>`_.
     Args:
         num_classes (int): number of classes used for one-hot encoding.
-        p (float): probability of the batch being transformed. Default value is 0.5.
+        p (float): probability of the batch being transformed. Default value
+        is 0.5.
         alpha (float): hyperparameter of the Beta distribution used for mixup.
             Default value is 1.0.
-        inplace (bool): boolean to make this transform inplace. Default set to False.
+        inplace (bool): boolean to make this transform inplace. Default set to
+          False.
     """
 
     def __init__(
@@ -32,7 +39,8 @@ class RandomMixup(torch.nn.Module):
 
         if num_classes < 1:
             raise ValueError(
-                f"Please provide a valid positive value for the num_classes. Got num_classes={num_classes}"
+                "Please provide a valid positive value for the num_classes."
+                + f" Got num_classes={num_classes}"
             )
 
         if alpha <= 0:
@@ -76,7 +84,8 @@ class RandomMixup(torch.nn.Module):
         if torch.rand(1).item() >= self.p:
             return batch, target
 
-        # It's faster to roll the batch by one instead of shuffling it to create image pairs
+        # It's faster to roll the batch by one instead of shuffling it to
+        # create image pairs
         batch_rolled = batch.roll(1, 0)
         target_rolled = target.roll(1, 0)
 

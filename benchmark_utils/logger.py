@@ -21,7 +21,8 @@ class Logger:
         # (csv_dir / dt_string).mkdir(parents=True, exist_ok=True)
         csv_dir.mkdir(parents=True, exist_ok=True)
 
-        # self.csv_stats = PandasStats(csv_dir / dt_string / "results.csv", metrics_name)
+        # self.csv_stats = PandasStats(csv_dir / dt_string / "results.csv",
+        # metrics_name)
         self.csv_stats = PandasStats(csv_dir / "results.csv", metrics_name)
 
         if tensorboard_dir is not None:
@@ -34,7 +35,7 @@ class Logger:
         self.verbose = verbose
 
     def log_step(self, metrics_dict, step):
-        # Pour éviter des erreurs on rajoute la vérification des métriques names
+        # To avoid mistakes, we check metrics names
         for k in self.metrics_name:
             assert k in self.metrics_name
         dict_for_csv = dict([(k, None) for k in self.metrics_name])
@@ -50,17 +51,6 @@ class Logger:
                 [f"{k} {v:.4f}" for k, v in metrics_dict.items()]
             )
             print(print_str)
-
-        # f"Epoch: [{current_epoch}][{step}]\t"
-        # f"Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
-        # f"train/loss {train_loss_meter.val:.4f} ({train_loss_meter.avg:.4f})\t"
-        # f"train/loss_without_reg {loss_without_reg_val:.4f} ({loss_without_reg_avg:.4f})\t"
-        # f"train/reg {reg_val:.4f} ({reg_avg:.4f})\t"
-        # f"train/tau_reg {tau * reg_val:.4f} ({tau * reg_avg:.4f})\t"
-        # f"train/acc {train_acc_meter.val:.1f} ({train_acc_meter.avg:.1f})\t"
-        # f"Lr: {lr:.4f} \t"
-        # f"Max memory: {memory_mb:.1f} MB"
-        # )
 
     def close(self):
         if self.writer is not None:
