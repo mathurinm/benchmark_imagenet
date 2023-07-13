@@ -1,0 +1,6 @@
+solver:
+  - adamw[max_epochs=90,lr=0.001,amp=True]
+
+dataset:
+  - imagenet[data_path='/local/agonon/ImageNet']
+
