@@ -19,9 +19,9 @@ where the path to ImageNet is user specific and should contains two subfolders: 
 
 	$ benchopt run . --config runner_config.yml
 
-All the options for the solver and the datasets can be bound in the sources of the corresponding files, in the paramaters dictionnary of the classes Solver and DataSet.
+All the options for the solver and the datasets can fe bound in the sources of the corresponding files, in the paramaters dictionnary of the classes Solver and DataSet.
 
-For now, this only runs on single GPU.
+For now, this only runs on a single GPU.
 
 Install
 --------
@@ -31,7 +31,7 @@ This benchmark can be run using the following commands:
 .. code-block::
 
    $ pip install -U benchopt
-   $ git clone https://github.com/agonon/benchmark_imagenet
+   $ git clone https://github.com/mathurinm/benchmark_imagenet
    $ benchopt run benchmark_imagenet
 
 
